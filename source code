@@ -1,0 +1,55 @@
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+import hashlib
+import argparse
+import os
+
+def generate_key(password):
+    # Use SHA-256 to derive a fixed-size key from the password
+    key = hashlib.sha256(password.encode()).digest()
+    return key
+
+def encrypt_file(input_file, output_file, password):
+    key = generate_key(password)
+    cipher = AES.new(key, AES.MODE_CBC)
+
+    with open(input_file, 'rb') as file:
+        plaintext = file.read()
+
+    ciphertext = cipher.encrypt(pad(plaintext, AES.block_size))
+
+    with open(output_file, 'wb') as file:
+        file.write(cipher.iv)
+        file.write(ciphertext)
+
+def decrypt_file(input_file, output_file, password):
+    key = generate_key(password)
+
+    with open(input_file, 'rb') as file:
+        iv = file.read(16)
+        ciphertext = file.read()
+
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
+
+    with open(output_file, 'wb') as file:
+        file.write(plaintext)
+
+def main():
+    parser = argparse.ArgumentParser(description='File Encryption and Decryption Tool')
+    parser.add_argument('input_file', help='Path of the input file')
+    parser.add_argument('output_file', help='Path of the output file')
+    parser.add_argument('password', help='Encryption/Decryption password')
+    parser.add_argument('-d', '--decrypt', action='store_true', help='Decrypt the file')
+
+    args = parser.parse_args()
+
+    if args.decrypt:
+        decrypt_file(args.input_file, args.output_file, args.password)
+        print("File decrypted successfully.")
+    else:
+        encrypt_file(args.input_file, args.output_file, args.password)
+        print("File encrypted successfully.")
+
+if __name__ == "__main__":
+    main()
